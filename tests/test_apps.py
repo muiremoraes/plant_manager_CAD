@@ -328,5 +328,18 @@ def test_get_weather_of_a_place_that_doesnt_exist(client):
 # cmd to run test
 # PYTHONPATH=. pytest -v -k "test"
 
+# TODO Test for login, register
+
+# def test_register(client):
+#     """tests POST request for adding new plant"""
+#     response = client.post("/register", json={ 
+#         "username": "Testuser123",
+
+
+#     })
+#     assert response.status_code == 201 
+#     data = response.get_json() 
+#     assert data["message"] == "plant added successfully"
+
 
 

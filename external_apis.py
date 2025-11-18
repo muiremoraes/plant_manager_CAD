@@ -2,9 +2,14 @@
 import requests
 from geopy.geocoders import Nominatim
 
+import os
+
+print(os.getenv("api_key", default=None))
+
+image_api_key = os.getenv("image_api_key", default=None)
 
 def get_plant_image(plant_name):
-    url = f"https://api.unsplash.com/search/photos?query={plant_name}&client_id=GYdriHj7J2Rjy-GBMq4oKZNtcLDrEXoZWJCLQs7FN0E"
+    url = f"https://api.unsplash.com/search/photos?query={plant_name}&client_id={image_api_key}"
     response = requests.get(url).json()
     if response.get('results'):
         return response['results'][0]['urls']['regular']
@@ -18,8 +23,8 @@ def get_weather(city_name):
     if not location:
         return {"error": f"'{city_name}' is not a valid city."}
 
-    api_key = "7169d5adfea6dd2e6f52b8e50c399697" 
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid={api_key}&units=metric"
+    weather_api_key = os.getenv("weather_api_key", default=None)
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid={weather_api_key}&units=metric"
 
     try:
         response = requests.get(url)

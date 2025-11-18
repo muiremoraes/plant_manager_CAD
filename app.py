@@ -2,19 +2,76 @@
 from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
 from flask_cors import CORS
-from models import db, Plant
+from models import db, Plant, User
 from werkzeug.exceptions import NotFound, HTTPException
 from external_apis import get_plant_image, get_weather
-
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
 CORS(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///plants.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config['SECRET_KEY'] = 'strong_secret_key' # TODO: dont have secret displayed like this 
+app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'
 db.init_app(app)
+bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
 
 with app.app_context():
     db.create_all()
+
+
+
+
+
+@app.route('/get_user', methods=['GET'])
+@jwt_required()
+def get_user():
+    user_id = get_jwt_identity()
+    user = User.query.filter_by(id=user_id).first()
+
+    # if not username or not email or not password:
+    #     return jsonify({'message': 'Missing required fields'}), 400
+
+    if user:
+        return jsonify({'message': 'Sucess', 'name': user.username}), 200
+    else:
+        return jsonify({'message': 'Failed'}), 404
+
+
+
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not username or not email or not password:
+        return jsonify({'message': 'Missing required fields'}), 400
+
+    hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
+    user = User(username=username, email=email, password=hashed_pw)
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({'message':'User registered'}), 201
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+
+    user = User.query.filter_by(username=username).first()
+
+    if user and bcrypt.check_password_hash(user.password, password):
+        token = create_access_token(identity=str(user.id)) # TODO: add timeout refresh token endpoint and generate new access token 
+        return jsonify({'token': token}), 200
+
+    return jsonify({'message': 'Invalid credentials'}), 401
 
 
 class PlantResource(Resource):
@@ -155,13 +212,13 @@ def home():
     return {'message': 'Welcome'}
 
 
-@app.errorhandler(HTTPException)
-def handle_http_exception(e):
-    return jsonify({'message': e.description}), e.code
+# @app.errorhandler(HTTPException)
+# def handle_http_exception(e):
+#     return jsonify({'message': e.description}), e.code
 
-@app.errorhandler(Exception)
-def handle_exception(e):
-    return jsonify({'message': 'An unexpected error occurred'}), 400
+# @app.errorhandler(Exception)
+# def handle_exception(e):
+#     return jsonify({'message': 'An unexpected error occurred'}), 400
 
 
 
@@ -172,3 +229,4 @@ if __name__ == '__main__':
 # cmd for venv
 #  source ./venv/bin/activate
 
+# ./runProgram.sh
