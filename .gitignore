@@ -1,4 +1,5 @@
 runProgram.sh
 /venv/
 /__pycache__/
-
+/instance/plants.db
+/tests/__pycache__/
