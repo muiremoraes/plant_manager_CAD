@@ -13,7 +13,7 @@ CORS(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///plants.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['SECRET_KEY'] = 'strong_secret_key' # TODO: dont have secret displayed like this 
-app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'
+app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key' # TODO:change hardcoding
 db.init_app(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
@@ -32,12 +32,12 @@ def get_user():
     user = User.query.filter_by(id=user_id).first()
 
     # if not username or not email or not password:
-    #     return jsonify({'message': 'Missing required fields'}), 400
+    #     return {'message': 'Missing required fields'}, 400
 
     if user:
-        return jsonify({'message': 'Sucess', 'name': user.username}), 200
+        return {'message': 'Sucess', 'name': user.username}, 200
     else:
-        return jsonify({'message': 'Failed'}), 404
+        return {'message': 'Failed'}, 404
 
 
 
@@ -49,13 +49,13 @@ def register():
     password = data.get('password')
 
     if not username or not email or not password:
-        return jsonify({'message': 'Missing required fields'}), 400
+        return {'message': 'Missing required fields'}, 400
 
     hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
     user = User(username=username, email=email, password=hashed_pw)
     db.session.add(user)
     db.session.commit()
-    return jsonify({'message':'User registered'}), 201
+    return {'message':'User registered'}, 201
 
 
 @app.route('/login', methods=['POST'])
@@ -69,9 +69,9 @@ def login():
 
     if user and bcrypt.check_password_hash(user.password, password):
         token = create_access_token(identity=str(user.id)) # TODO: add timeout refresh token endpoint and generate new access token 
-        return jsonify({'token': token}), 200
+        return {'token': token}, 200
 
-    return jsonify({'message': 'Invalid credentials'}), 401
+    return {'message': 'Invalid credentials'}, 401
 
 
 class PlantResource(Resource):
@@ -80,7 +80,7 @@ class PlantResource(Resource):
         if plant_id:
             plant = Plant.query.get(plant_id)
             if plant is None:
-                return jsonify({'message': f'Plant with id {plant_id} not found'}), 404
+                return{'message': f'Plant with id {plant_id} not found'}, 404
 
             image_url = None
             image_url = get_plant_image(plant.name)       
@@ -153,7 +153,7 @@ class PlantResource(Resource):
         data = request.get_json()
         plant = Plant.query.get(plant_id) 
         if not plant: 
-            return jsonify({'message': f'Plant with id {plant_id} not found'}), 404
+            return {'message': f'Plant with id {plant_id} not found'}, 404
 
         if 'name' in data:
             plant.name = data['name']
@@ -187,7 +187,7 @@ class PlantResource(Resource):
     def delete(self, plant_id):
         plant = Plant.query.get(plant_id) 
         if not plant: 
-            return jsonify({'message': f'Plant with id {plant_id} not found'}), 404
+            return {'message': f'Plant with id {plant_id} not found'}, 404
         db.session.delete(plant)
         db.session.commit()
         return {'message': 'plant deleted successfully'}, 200
@@ -198,8 +198,8 @@ class PlantResource(Resource):
 def weather(city):
     weather_info = get_weather(city)
     if "error" in weather_info:
-        return jsonify(weather_info), 404
-    return jsonify(weather_info), 200
+        return weather_info, 404
+    return weather_info, 200
 
 
 
@@ -214,11 +214,11 @@ def home():
 
 # @app.errorhandler(HTTPException)
 # def handle_http_exception(e):
-#     return jsonify({'message': e.description}), e.code
+#     return {'message': e.description}, e.code
 
 # @app.errorhandler(Exception)
 # def handle_exception(e):
-#     return jsonify({'message': 'An unexpected error occurred'}), 400
+#     return {'message': 'An unexpected error occurred'}, 400
 
 
 
