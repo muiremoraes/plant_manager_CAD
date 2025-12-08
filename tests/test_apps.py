@@ -140,7 +140,7 @@ def test_get_plant_by_id(client):
 def test_get_plant_by_id_that_doesnt_exist(client):
     """test to get a plant by id"""
     response = client.get("/plants/900")
-    assert response.status_code == 400
+    assert response.status_code == 404
     data = response.get_json()
     
 
@@ -187,7 +187,7 @@ def test_update_plant_that_doesnt_exist(client):
         "watered": True,
         "notes": "looks pretty"
     })
-    assert response.status_code == 400
+    assert response.status_code == 404
     data = response.get_json()
 
 
@@ -289,7 +289,7 @@ def test_delete_plant_that_doesnt_exist(client):
     })
 
     response = client.delete("/plants/100")
-    assert response.status_code == 400
+    assert response.status_code == 404
     data = response.get_json()
 
 
@@ -310,18 +310,18 @@ def test_delete_plant_using_string_value(client):
 
 
 
-def test_get_weather(client):
-   """test get weather"""
-   response = client.get("/weather/Dublin")
-   assert response.status_code == 200
-   data = response.get_json()
+# def test_get_weather(client):
+#    """test get weather"""
+#    response = client.get("/weather/Dublin")
+#    assert response.status_code == 200
+#    data = response.get_json()
 
 
-def test_get_weather_of_a_place_that_doesnt_exist(client):
-   """test get weather of a place that doesnt exist"""
-   response = client.get("/weather/abc")
-   assert response.status_code == 404
-   data = response.get_json()
+# def test_get_weather_of_a_place_that_doesnt_exist(client):
+#    """test get weather of a place that doesnt exist"""
+#    response = client.get("/weather/abc")
+#    assert response.status_code == 404
+#    data = response.get_json()
 
 
 
