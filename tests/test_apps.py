@@ -43,7 +43,7 @@ def test_create_plant_with_missing_name(client):
         "date_planted": "09-11-2025",
     })
     assert response.status_code == 400
-    data= response.get_json()
+    
     
 
 def test_create_plant_with_missing_location(client):
@@ -53,7 +53,7 @@ def test_create_plant_with_missing_location(client):
         "date_planted": "09-11-2025"
     })
     assert response.status_code == 400
-    data= response.get_json()
+    
     
     
 
@@ -64,7 +64,7 @@ def test_create_plant_with_missing_date(client):
         "location": "Kildare"
     })
     assert response.status_code == 400
-    data= response.get_json()
+    
 
 
 def test_create_plant_minus_for_height(client):
@@ -78,7 +78,7 @@ def test_create_plant_minus_for_height(client):
         "notes": "looks pretty"
     })
     assert response.status_code == 400
-    data = response.get_json
+    
 
 
 def test_create_plant_string_for_height(client):
@@ -92,7 +92,7 @@ def test_create_plant_string_for_height(client):
         "notes": "looks pretty"
     })
     assert response.status_code == 400
-    data = response.get_json
+    
     
 
 def test_get_all_plants(client):
@@ -107,11 +107,11 @@ def test_get_all_plants(client):
     })
     response = client.get("/plants")
     assert response.status_code == 200
-    data = response.get_json()
-    assert data["name"] in data[0]
+   
+    
 
 
-def test_get_all_plants(client):
+def test_get_all_plants_with_empty(client):
     """test to get all plants but no plant posted"""
     response = client.get("/plants")
     assert response.status_code == 200
@@ -141,8 +141,7 @@ def test_get_plant_by_id_that_doesnt_exist(client):
     """test to get a plant by id"""
     response = client.get("/plants/900")
     assert response.status_code == 404
-    data = response.get_json()
-    
+   
 
 def test_update_plant(client):
     """test update plant"""
@@ -164,7 +163,7 @@ def test_update_plant(client):
         "notes": "looks pretty"
     })
     assert response.status_code == 200
-    data = response.get_json()
+   
 
 
 
@@ -188,7 +187,7 @@ def test_update_plant_that_doesnt_exist(client):
         "notes": "looks pretty"
     })
     assert response.status_code == 404
-    data = response.get_json()
+    
 
 
 
@@ -211,7 +210,7 @@ def test_update_plant_with_missing_field(client):
         "notes": "looks pretty"
     })
     assert response.status_code == 200
-    data = response.get_json()
+    
 
 
 def test_update_plant_with_negative_height_value(client):
@@ -234,7 +233,7 @@ def test_update_plant_with_negative_height_value(client):
         "notes": "looks pretty"
     })
     assert response.status_code == 400
-    data = response.get_json()
+    
 
 
 def test_update_plant_with_string_value_for_height(client):
@@ -257,7 +256,7 @@ def test_update_plant_with_string_value_for_height(client):
         "notes": "looks pretty"
     })
     assert response.status_code == 400
-    data = response.get_json()
+    
 
 
 
@@ -274,7 +273,7 @@ def test_delete_plant(client):
 
     response = client.delete("/plants/1")
     assert response.status_code == 200
-    data = response.get_json()
+ 
 
 
 def test_delete_plant_that_doesnt_exist(client):
@@ -290,7 +289,6 @@ def test_delete_plant_that_doesnt_exist(client):
 
     response = client.delete("/plants/100")
     assert response.status_code == 404
-    data = response.get_json()
 
 
 def test_delete_plant_using_string_value(client):
@@ -305,41 +303,159 @@ def test_delete_plant_using_string_value(client):
     })
 
     response = client.delete("/plants/abc")
-    assert response.status_code == 400 or 404
-    data = response.get_json()
+    assert response.status_code in (400, 404)
+    
+
+def test_get_weather(client):
+    response = client.get("/weather/Dublin")
+    assert response.status_code == 200
+
+
+def test_get_weather_with_no_correct_city(client):
+    response = client.get("/weather/blah")
+    assert response.status_code == 404
+
+
+def test_get_weather_with_blank(client):
+    response = client.get("/weather/")
+    assert response.status_code == 404
+
+
+def test_get_weather_with_a_number(client):
+    response = client.get("/weather/123")
+    assert response.status_code == 404
+
+
+def test_get_image(client):
+    response = client.get("/image/rose")
+    assert response.status_code == 200
+
+
+def test_get_image_with_image_doesnt_exist(client):
+    response = client.get("/image/fancy flower")
+    assert response.status_code == 404
+
+
+def test_get_image_with_number(client):
+    response = client.get("/image/1234")
+    assert response.status_code == 404
+
+
+def test_register(client):
+    response = client.post("/register", json={
+        "username":"123user",
+        "email":"user@person.com",
+        "password":"SuperPass123"
+    })
+    assert response.status_code == 201
 
 
 
-# def test_get_weather(client):
-#    """test get weather"""
-#    response = client.get("/weather/Dublin")
-#    assert response.status_code == 200
-#    data = response.get_json()
+def test_register_weak_pass_less_than_8_char(client):
+    response = client.post("/register", json={
+        "username":"123user",
+        "email":"user@person.com",
+        "password":"pass"
+    })
+    assert response.status_code == 400
 
 
-# def test_get_weather_of_a_place_that_doesnt_exist(client):
-#    """test get weather of a place that doesnt exist"""
-#    response = client.get("/weather/abc")
-#    assert response.status_code == 404
-#    data = response.get_json()
+def test_register_weak_pass_no_upper_c(client):
+    response = client.post("/register", json={
+        "username":"123user",
+        "email":"user@person.com",
+        "password":"password123"
+    })
+    assert response.status_code == 400
+
+def test_register_weak_pass_no_lower_c(client):
+    response = client.post("/register", json={
+        "username":"123user",
+        "email":"user@person.com",
+        "password":"PASSWORD123"
+    })
+    assert response.status_code == 400
+
+def test_register_no_a_in_email(client):
+    response = client.post("/register", json={
+        "username":"123user",
+        "email":"userperson.com",
+        "password":"Password123"
+    })
+    assert response.status_code == 400
+
+
+
+def test_register_no_a_in_email(client):
+    client.post("/register", json={
+        "username":"123user",
+        "email":"userperson.com",
+        "password":"Password123"
+    })
+    response = client.post("/register", json={
+        "username":"1234user",
+        "email":"userperson.com",
+        "password":"Password1234"
+    })
+    assert response.status_code == 400
+
+
+
+def test_login(client):
+    client.post("/register", json={
+        "username":"123user",
+        "email":"user@person.com",
+        "password":"Password123"
+    })
+    response = client.post("/login", json={
+        "username":"123user",
+        "email":"user@person.com",
+        "password":"Password123"
+    })
+    assert response.status_code == 200
+
+
+def test_login_with_no_password(client):
+    client.post("/register", json={
+        "username":"123user",
+        "email":"user@person.com",
+        "password":"Password123"
+    })
+    response = client.post("/login", json={
+        "username":"123user",
+        "email":"",
+        "password":"Password123"
+    })
+    assert response.status_code == 400
+
+
+
+def test_login_with_incorrect_password(client):
+    client.post("/register", json={
+        "username":"123user",
+        "email":"user@person.com",
+        "password":"Password123"
+    })
+    response = client.post("/login", json={
+        "username":"123user",
+        "email":"user@person.com",
+        "password":"abcPassword123"
+    })
+    assert response.status_code == 401
+
+
+
+
+
+
+
 
 
 
 # cmd to run test
 # PYTHONPATH=. pytest -v -k "test"
 
-# TODO Test for login, register
 
-# def test_register(client):
-#     """tests POST request for adding new plant"""
-#     response = client.post("/register", json={ 
-#         "username": "Testuser123",
-
-
-#     })
-#     assert response.status_code == 201 
-#     data = response.get_json() 
-#     assert data["message"] == "plant added successfully"
 
 
 

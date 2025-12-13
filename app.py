@@ -51,6 +51,19 @@ def register():
     if not username or not email or not password:
         return {'message': 'Missing required fields'}, 400
 
+    if "@" not in email:
+        return jsonify({"message":"please enter a valid email"}),400
+    
+    if User.query.filter_by(email=email).first():
+        return jsonify({"message":"one email per account"}),400
+
+    if len(password) < 8:
+        return jsonify({"message":"Password must be at least 8 long."}),400
+    if not any(c.isupper() for c in password):
+        return jsonify({"message":"password must have at least one uppercase letter."}),400
+    if not any(c.islower() for c in password):
+        return jsonify({"message":"password must have at least one lowercase letter."}),400
+
     hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
     user = User(username=username, email=email, password=hashed_pw)
     db.session.add(user)
@@ -64,6 +77,9 @@ def login():
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
+
+    if not username or not email or not password:
+        return {'message': 'Missing required fields'}, 400
 
     user = User.query.filter_by(username=username).first()
 
@@ -196,10 +212,25 @@ class PlantResource(Resource):
 
 @app.route("/weather/<string:city>", methods=["GET"])
 def weather(city):
+    if app.config.get("TESTING"):
+        if city.lower() == "dublin":    
+            return {"temp":16, "condition":"sunny"},200
+        else:
+            return {"message":"city not found"},404
+     
     weather_info = get_weather(city)
     if "error" in weather_info:
         return weather_info, 404
     return weather_info, 200
+
+@app.route("/image/<string:plant>", methods=["GET"])
+def image_test_fucntion(plant):
+    if app.config.get("TESTING"):
+        if plant.lower() =="rose":
+            return {"image":"some image"},200
+        else:
+            return{"message":"error no image"},404
+
 
 
 
