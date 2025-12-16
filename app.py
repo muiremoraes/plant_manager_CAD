@@ -1,5 +1,5 @@
 
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from flask_restful import Resource, Api
 from flask_cors import CORS
 from models import db, Plant, User
@@ -7,13 +7,18 @@ from werkzeug.exceptions import NotFound, HTTPException
 from external_apis import get_plant_image, get_weather
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
+import os
 
 app = Flask(__name__)
-CORS(app)
+#CORS(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///plants.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config['SECRET_KEY'] = 'strong_secret_key' # TODO: dont have secret displayed like this 
-app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key' # TODO:change hardcoding
+# app.config['SECRET_KEY'] = 'strong_secret_key' # TODO: dont have secret displayed like this 
+# app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key' # TODO:change hardcoding
+
+app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", default=None)
+app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", default=None)
+
 db.init_app(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
@@ -21,8 +26,18 @@ jwt = JWTManager(app)
 with app.app_context():
     db.create_all()
 
+CORS(app, resources={r"*": {"origins": "*"}}, supports_credentials=True, expose_headers=["Authorization"])
 
+@app.after_request
+def secure_headers(response): # secuirty headeder sent after every request
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains' # forces https
 
+    response.headers['Content-Security-Policy'] = ("default-src 'self'; " "frame-ancestors 'none'; " "form-action 'self'; ")
+    # only load resources from server, prevent embedding url on site and can only send form to site
+    response.headers['X-Content-Type-Options'] = 'nosniff' # preveent content sniffing as that would let a user see the format of data
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN' # prevents malicous useing hiding links on page
+    response.headers['X-XSS-Protection'] = '1; mode=block' #XSS filter
+    return response
 
 
 @app.route('/get_user', methods=['GET'])
@@ -52,17 +67,20 @@ def register():
         return {'message': 'Missing required fields'}, 400
 
     if "@" not in email:
-        return jsonify({"message":"please enter a valid email"}),400
+        return {"message":"please enter a valid email"},400
     
     if User.query.filter_by(email=email).first():
-        return jsonify({"message":"one email per account"}),400
+        return {"message":"one email per account"},400
+
+    if User.query.filter_by(username=username).first():
+        return {"message":"username already exists"},400
 
     if len(password) < 8:
-        return jsonify({"message":"Password must be at least 8 long."}),400
+        return {"message":"Password must be at least 8 long."},400
     if not any(c.isupper() for c in password):
-        return jsonify({"message":"password must have at least one uppercase letter."}),400
+        return {"message":"password must have at least one uppercase letter."},400
     if not any(c.islower() for c in password):
-        return jsonify({"message":"password must have at least one lowercase letter."}),400
+        return {"message":"password must have at least one lowercase letter."},400
 
     hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
     user = User(username=username, email=email, password=hashed_pw)
@@ -75,16 +93,15 @@ def register():
 def login():
     data = request.get_json()
     username = data.get('username')
-    email = data.get('email')
     password = data.get('password')
 
-    if not username or not email or not password:
+    if not username or not password:
         return {'message': 'Missing required fields'}, 400
 
     user = User.query.filter_by(username=username).first()
 
     if user and bcrypt.check_password_hash(user.password, password):
-        token = create_access_token(identity=str(user.id)) # TODO: add timeout refresh token endpoint and generate new access token 
+        token = create_access_token(identity=str(user.id)) 
         return {'token': token}, 200
 
     return {'message': 'Invalid credentials'}, 401
@@ -92,6 +109,7 @@ def login():
 
 class PlantResource(Resource):
 
+    @jwt_required()
     def get(self, plant_id=None):
         if plant_id:
             plant = Plant.query.get(plant_id)
@@ -130,6 +148,7 @@ class PlantResource(Resource):
             ]
 
 
+    @jwt_required()
     def post(self):
         data = request.get_json()
 
@@ -157,7 +176,7 @@ class PlantResource(Resource):
             location=data.get('location'),
             date_planted=data.get('date_planted'),
             height=height,
-            watered=data.get('watered', False),
+            watered=bool(data.get('watered', False)),
             notes=data.get('notes')
         )
         db.session.add(new_plant)
@@ -165,6 +184,7 @@ class PlantResource(Resource):
         return {'message': 'plant added successfully'}, 201
 
 
+    @jwt_required()
     def put(self, plant_id):
         data = request.get_json()
         plant = Plant.query.get(plant_id) 
@@ -194,12 +214,11 @@ class PlantResource(Resource):
         plant.location = data.get('location', plant.location)
         plant.date_planted = data.get('date_planted', plant.date_planted)
         plant.height = height
-        plant.watered = data.get('watered', plant.watered)
-        plant.notes = data.get('notes', plant.notes)
         db.session.commit()
         return {'message': 'plant updated successfully'}, 200
 
 
+    @jwt_required()
     def delete(self, plant_id):
         plant = Plant.query.get(plant_id) 
         if not plant: 
@@ -207,7 +226,6 @@ class PlantResource(Resource):
         db.session.delete(plant)
         db.session.commit()
         return {'message': 'plant deleted successfully'}, 200
-
 
 
 @app.route("/weather/<string:city>", methods=["GET"])

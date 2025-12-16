@@ -24,7 +24,7 @@ def get_weather(city_name):
         return {"error": f"'{city_name}' is not a valid city."}
 
     weather_api_key = os.getenv("weather_api_key", default=None)
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid={weather_api_key}&units=metric"
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city_name}&appid={weather_api_key}&units=metric"
 
     try:
         response = requests.get(url)
