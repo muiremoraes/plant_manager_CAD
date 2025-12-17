@@ -28,14 +28,14 @@ def client():
 
 def auth(client):
     with app.app_context():
-        hashed_pw=bcrypt.generate_password_hash("Password123").decode("utf-8")
-        user = User(username="testuser", email="test@test.com", password=hashed_pw)
-        db.session.add(user)
+        hashed_pw=bcrypt.generate_password_hash("Password123").decode("utf-8") #generate hashed pass
+        user = User(username="testuser", email="test@test.com", password=hashed_pw) #user obejct 
+        db.session.add(user) #add user to database
         db.session.commit()
 
-        token = create_access_token(identity=str(user.id))
+        token = create_access_token(identity=str(user.id)) #generate JWT access token for new user 
         return {
-            "Authorization": f"Bearer {token}"
+            "Authorization": f"Bearer {token}" #return header for testing
         }
 
 
@@ -51,7 +51,7 @@ def test_create_plant(client):
         "height": 10.5,
         "watered": True,
         "notes": "looks pretty"
-    }, headers=headers)
+    }, headers=headers) #pass jwt header
     assert response.status_code == 201 
     data = response.get_json() 
     assert data["message"] == "plant added successfully"

@@ -3,8 +3,7 @@ import requests
 from geopy.geocoders import Nominatim
 
 import os
-
-print(os.getenv("api_key", default=None))
+#api keys from evoirment variable
 
 image_api_key = os.getenv("image_api_key", default=None)
 
@@ -12,14 +11,14 @@ def get_plant_image(plant_name):
     url = f"https://api.unsplash.com/search/photos?query={plant_name}&client_id={image_api_key}"
     response = requests.get(url).json()
     if response.get('results'):
-        return response['results'][0]['urls']['regular']
+        return response['results'][0]['urls']['regular'] #get first response 
     return None
 
 
 def get_weather(city_name):
     geolocator = Nominatim(user_agent="weather_app")
 
-    location = geolocator.geocode(city_name)
+    location = geolocator.geocode(city_name) #checks if city
     if not location:
         return {"error": f"'{city_name}' is not a valid city."}
 
@@ -33,7 +32,7 @@ def get_weather(city_name):
         if response.status_code == 200 and data.get("main"):
             weather = {
                 "city": data["name"],
-                "country": data["sys"]["country"],
+                "country": data["sys"]["country"], #get name, country, weather
                 "temperature": data["main"]["temp"],
                 "description": data["weather"][0]["description"],
             }

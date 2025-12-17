@@ -9,21 +9,21 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from flask_bcrypt import Bcrypt
 import os
 
-app = Flask(__name__)
-#CORS(app)
+app = Flask(__name__) #initalise flask app
+
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///plants.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-# app.config['SECRET_KEY'] = 'strong_secret_key' # TODO: dont have secret displayed like this 
-# app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key' # TODO:change hardcoding
+
 
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", default=None)
-app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", default=None)
+app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", default=None) #uses envoirment variables for secret keys
 
-db.init_app(app)
-bcrypt = Bcrypt(app)
-jwt = JWTManager(app)
+#initalise 
+db.init_app(app) #db
+bcrypt = Bcrypt(app)#password hashing
+jwt = JWTManager(app)#jwt 
 
-with app.app_context():
+with app.app_context(): #create db id it doesnt exist
     db.create_all()
 
 CORS(app, resources={r"*": {"origins": "*"}}, supports_credentials=True, expose_headers=["Authorization"])
@@ -40,7 +40,7 @@ def secure_headers(response): # secuirty headeder sent after every request
     return response
 
 
-@app.route('/get_user', methods=['GET'])
+@app.route('/get_user', methods=['GET']) #get user endpoint for testing
 @jwt_required()
 def get_user():
     user_id = get_jwt_identity()
@@ -56,12 +56,12 @@ def get_user():
 
 
 
-@app.route('/register', methods=['POST'])
+@app.route('/register', methods=['POST'])# endpoint to register a new user
 def register():
     data = request.get_json()
     username = data.get('username')
     email = data.get('email')
-    password = data.get('password')
+    password = data.get('password') #get info from the form
 
     if not username or not email or not password:
         return {'message': 'Missing required fields'}, 400
@@ -82,14 +82,14 @@ def register():
     if not any(c.islower() for c in password):
         return {"message":"password must have at least one lowercase letter."},400
 
-    hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
+    hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8') #hash password before storing 
     user = User(username=username, email=email, password=hashed_pw)
     db.session.add(user)
     db.session.commit()
     return {'message':'User registered'}, 201
 
 
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST']) #user login path 
 def login():
     data = request.get_json()
     username = data.get('username')
@@ -100,24 +100,24 @@ def login():
 
     user = User.query.filter_by(username=username).first()
 
-    if user and bcrypt.check_password_hash(user.password, password):
+    if user and bcrypt.check_password_hash(user.password, password): #if user and password create JWT
         token = create_access_token(identity=str(user.id)) 
         return {'token': token}, 200
 
     return {'message': 'Invalid credentials'}, 401
 
 
-class PlantResource(Resource):
+class PlantResource(Resource): #plant resource for CRUD
 
     @jwt_required()
-    def get(self, plant_id=None):
+    def get(self, plant_id=None): #gets plants
         if plant_id:
             plant = Plant.query.get(plant_id)
             if plant is None:
                 return{'message': f'Plant with id {plant_id} not found'}, 404
 
             image_url = None
-            image_url = get_plant_image(plant.name)       
+            image_url = get_plant_image(plant.name) #get image from external API
 
             return {
                 'id': plant.id,
@@ -132,7 +132,7 @@ class PlantResource(Resource):
         else:
             plants = Plant.query.all()
             if not plants:
-                return{'plants':[], 'message': 'no plants found'}
+                return{'plants':[], 'message': 'no plants found'} #returns if no plants
             return [
                 {
                     'id': plant.id,
@@ -149,7 +149,7 @@ class PlantResource(Resource):
 
 
     @jwt_required()
-    def post(self):
+    def post(self): #add plants
         data = request.get_json()
 
         if not data.get('name'):
@@ -160,8 +160,9 @@ class PlantResource(Resource):
 
         if not data.get('date_planted'):
             return{'message': 'please enter a date'}, 400
+            #checks all feilds
 
-        height = None
+        height = None #checks height
         if data.get('height') is not None:
             try: 
                 height = float(data.get('height'))
@@ -179,13 +180,13 @@ class PlantResource(Resource):
             watered=bool(data.get('watered', False)),
             notes=data.get('notes')
         )
-        db.session.add(new_plant)
+        db.session.add(new_plant) #add to DB
         db.session.commit()
         return {'message': 'plant added successfully'}, 201
 
 
     @jwt_required()
-    def put(self, plant_id):
+    def put(self, plant_id): #edit plant info
         data = request.get_json()
         plant = Plant.query.get(plant_id) 
         if not plant: 
@@ -199,9 +200,10 @@ class PlantResource(Resource):
 
         if 'date_planted' in data:
             plant.date_planted = data['date_planted']
+            #update feild if change occured
 
 
-        height = plant.height
+        height = plant.height #validates height
         if data.get('height') is not None:
             try: 
                 height = float(data.get('height'))
@@ -228,11 +230,11 @@ class PlantResource(Resource):
         return {'message': 'plant deleted successfully'}, 200
 
 
-@app.route("/weather/<string:city>", methods=["GET"])
+@app.route("/weather/<string:city>", methods=["GET"]) #reoute to check weathrt 
 def weather(city):
     if app.config.get("TESTING"):
         if city.lower() == "dublin":    
-            return {"temp":16, "condition":"sunny"},200
+            return {"temp":16, "condition":"sunny"},200 #return mock datatype
         else:
             return {"message":"city not found"},404
      
